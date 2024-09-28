@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{%block title %}Add_twit{% endblock %}
+{% block content %}
+    <h1>Add Twit </h1>
+    <form method="post" enctype="multipart/form-data">
+        {{ twit_form.as_p}}
+        {% csrf_token %}
+        <p><input type="submit" value="Add"></p>
+    </form>
+{% endblock %}

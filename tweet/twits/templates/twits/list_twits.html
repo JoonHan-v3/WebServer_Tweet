@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load twit_tags %}
+{% load thumbnail %}
+{% load static %}
+{% block title %} List_twits {% endblock %}
+{% block content %}
+
+    <div class="align-right">
+        <button type="button" class="right-side"><a href="{% url 'twits:add_twit' %}">+Add New</a></button>
+    </div>
+
+    <h1>Dashboard</h1>
+    {% for twit in twits %}
+                <div class="twit">
+                    {% if twit.user.profile.photo %}
+                        <div class="profile-info">
+                            <a href="{{ twit.user.profile.photo.url }}">
+                                <img src="{% thumbnail twit.user.profile.photo 180x180 %}" class="user-detail">
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="profile-info">
+                            <a href="{% static "images/none.jpg"%}">
+                                <img src="{% static "images/none.jpg" %}" class="user-detail">
+                            </a>
+                        </div>
+                    {% endif %}
+                    <br>
+                    <a href="{% url "twits:user_twits" twit.user.id %}">{{ twit.user.username }}</a> &nbsp;
+
+                    {% twit_add twit as add_action %}
+                    {% if add_action %}
+                        <span style="font-size:x-small;">{{ add_action.created|timesince }} ago </span>
+                    {% else %}
+                        <span style="font-size:x-small;">{{ twit.created_date }}</span>
+                    {% endif %}
+                    
+                    {% if twit.image %}
+                        <div class="twit-image">
+                            <a href="{{ twit.image.url }}">
+                                <img src="{{ twit.image.url }}" width="100%">
+                            </a>      
+                        </div>
+                    {% endif %}
+                    
+                    <div class="twit-content">
+                        {{ twit.body|linebreaks }}
+                    </div>
+                    
+                    {% with total_likes=twit.users_like.count users_like=twit.users_like.all %}
+                        <div class="image-info">
+                            <div>
+                                <span class="count dropdown">
+                                    <button class="total dropbtn" id="total_{{ twit.id }}" data-id="total_{{ twit.id }}">
+                                        {{ total_likes }}
+                                        <i class="fa fa-caret-down"></i>
+                                    </button>
+                                    like{{ total_likes|pluralize }}
+                                    <div class="dropdown-content" style="font-size: small;">
+                                            {% for user in twit.users_like.all %}
+                                            <a href="{% url "twits:user_twits" user.id %}" style="color: bisque;">{{user.username }}</a><br>
+                                            {% empty %}
+                                                Nobody likes this image yet.
+                                            {% endfor %}
+                                    </div>
+                                </span>
+
+                                <a href="#" id="like_{{ twit.id }}" data-id="{{ twit.id }}" data-action="{% if request.user in users_like %}un{% endif %}like" class="button like ">
+                                    {% if request.user not in users_like %}
+                                    Like
+                                    {% else %}
+                                    Unlike
+                                    {% endif %}
+                                </a>
+                            </div>
+                        </div>
+
+                    {% endwith %}
+
+                    <div class="comment">
+                        Comments...
+                    </div>
+                    
+                    {% comments twit as comments %}
+                    {% for comment in comments %}
+                        <div class="comment">
+                            {% if comment.user.profile.photo %}
+                            <div class="profile-info">
+                                <a href="{{ comment.user.profile.photo.url }}">
+                                    <img src="{% thumbnail comment.user.profile.photo 180x180 %}" class="user-detail">
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="profile-info">
+                                <a href="{% static "images/none.jpg"%}">
+                                    <img src="{% static "images/none.jpg" %}" class="user-detail">
+                                </a>
+                            </div>
+                            {% endif %}
+                            <br>
+
+                            <div class="info">
+                                <a href="{% url "twits:user_twits" comment.user.id %}">{{ comment.user.username }}</a> &nbsp;
+                                <span>{{ comment.created_datetime }}</span><br>                  
+                            </div>
+                            <br>
+                            {{ comment.body|linebreaks }}
+                        </div>
+                    {% empty %}
+                        <div class="comment">
+                            <span class="info">
+                                There is no comments yet.
+                            </span>
+                        </div>
+                    {% endfor %}<br>
+                    <a href="{% url "twits:add_comment" twit.id %}">Add Comment</a><hr><br> 
+                </div> 
+           
+    {% empty %}    
+        <p>There is no twits yet. </p>
+    {% endfor %}
+{% endblock %}
+
+{% block domready %}
+$('a.like').click(function(e){
+  e.preventDefault();
+  var id = $(this).data('id');
+  var action = $(this).data('action');
+  var url = '{% url "twits:like" %}'
+  $.post(
+      url,
+    {
+      id: id,
+      action: action
+    },
+    function(data){
+      if (data['status'] == 'ok')
+      {
+        var previous_action = $('#like_'+id).data('action');
+
+        // toggle data-action
+        $('#like_'+id).data('action', previous_action == 'like' ?
+        'unlike' : 'like');
+        // toggle link text
+        $('#like_'+id).text(previous_action == 'like' ? 'Unlike' :
+        'Like');
+
+        // update total likes
+        var previous_likes = parseInt($('#total_'+id ).text());
+        $('#total_'+id).text(previous_action == 'like' ?
+        previous_likes + 1 : previous_likes - 1);
+      }
+    }
+  );
+});
+{% endblock %}

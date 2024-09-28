@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% load twit_tags %}
+{% load thumbnail %}
+{% load static %}
+{% block title %} List_twits {% endblock %}
+{% block content %}
+    <h1 style="color: black;">Public Profile</h1>
+    {% if user.profile.photo %}
+        <div class="profile-info">
+            <a href="{{ user.profile.photo.url }}">
+                <img src="{% thumbnail user.profile.photo 180x180 %}" class="user-detail">
+            </a>
+        </div>
+    {% else %}
+        <div class="profile-info">
+            <a href="{% static "images/none.jpg"%}">
+                <img src="{% static "images/none.jpg" %}" class="user-detail">
+            </a>
+        </div>
+    {% endif %}<br><br>
+
+
+    {% if user.first_name and user.last_name %}
+        {{user.first_name}} {{user.last_name}}<br>
+    {% endif %}
+    
+    {% if user.created %}
+        <span style="font-size: small;"> Joined since {{user.created}}</span>
+    {% endif %}
+
+    {% if user.email %}
+        <span style="font-size: small;">{{user.email}}</span>
+    {% endif %}
+
+    {% with total_followers=user.followers.count %}
+        <div style="float: right;">
+            <span class="count">
+                <span class="total">{{ total_followers }}</span>
+                follower{{ total_followers|pluralize }}
+            </span>
+
+            <a href="#" data-id="{{ user.id }}" data-action="{% if request.user in user.followers.all %}un{% endif %}follow" class="follow button">
+                {% if request.user not in user.followers.all %}
+                    Follow
+                {% else %}
+                    Unfollow
+                {% endif %}
+            </a>
+        </div>
+    {% endwith %}
+    <br><br>
+
+    <h1 style="color: black;"> Twits</h1>
+    {% for twit in twits %}
+        <span style="font-size:small;">{{ twit.created_date }}</span>
+
+        {% if twit.image %}
+            <div class="twit-image">
+                <a href="{{ twit.image.url }}">
+                    <img src="{{ twit.image.url }}" width="100%">
+                </a>      
+            </div>
+        {% endif %}
+        
+        <div class="twit-content">
+            {{ twit.body|linebreaks }}
+        </div>
+        
+        
+        <div class="comment">
+            Comments...
+        </div>
+        
+        
+        {% comments twit as comments %}
+        {% for comment in comments %}
+            <div class="comment">
+                {% if comment.user.profile.photo %}
+                <div class="profile-info">
+                    <a href="{{ comment.user.profile.photo.url }}">
+                        <img src="{% thumbnail comment.user.profile.photo 180x180 %}" class="user-detail">
+                    </a>
+                </div>
+                {% else %}
+                <div class="profile-info">
+                    <a href="{% static "images/none.jpg"%}">
+                        <img src="{% static "images/none.jpg" %}" class="user-detail">
+                    </a>
+                </div>
+                {% endif %}
+                <br>
+
+                <div class="info">
+                    <a href="{% url "twits:user_twits" comment.user.id %}">{{ comment.user.username }}</a> &nbsp;
+                    <span>{{ comment.created_datetime }}</span><br>                  
+                </div>
+                <br>
+                {{ comment.body }}
+            </div>
+        {% empty %}
+            <div class="comment">
+                <span class="info">
+                    There is no comments yet.
+                </span>
+            </div>
+        {% endfor %}<br>
+        <a href="{% url "twits:add_comment" twit.id %}">Add Comment</a><hr><br>   
+    {% empty %}    
+        <p>There is no twits yet. </p>
+    {% endfor %}
+{% endblock %}
+
+{% block domready %}
+  $('a.follow').click(function(e){
+    e.preventDefault();
+    $.post('{% url "user_follow" %}',
+      {
+        id: $(this).data('id'),
+        action: $(this).data('action')
+      },
+      function(data){
+        if (data['status'] == 'ok') {
+          var previous_action = $('a.follow').data('action');
+          // toggle data-action
+          $('a.follow').data('action',
+            previous_action == 'follow' ? 'unfollow' : 'follow');
+          // toggle link text
+          $('a.follow').text(
+            previous_action == 'follow' ? 'Unfollow' : 'Follow');
+          // update total followers
+          var previous_followers = parseInt(
+            $('span.count .total').text());
+          $('span.count .total').text(previous_action == 'follow' ?
+          previous_followers + 1 : previous_followers - 1);
+        }
+      }
+    );
+  });
+{% endblock %}

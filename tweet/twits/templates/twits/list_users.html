@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load thumbnail %}
+{% load static %}
+{% block title %} List_users {% endblock %}
+
+{% block content %}
+    
+    <h1>All users </h1>
+    
+    <div class="profile-info"></div>
+        {% for user in users %}
+            {% if user.profile.photo %}
+                <a href="{{ user.profile.photo.url }}">
+                    <img src="{% thumbnail user.profile.photo 180x180 %}" class="user-detail">
+                </a>
+            {% else %}
+                <a href="{% static "images/none.jpg"%}">
+                    <img src="{% static "images/none.jpg" %}" class="user-detail">
+                </a>
+            {% endif %}
+            <br> &nbsp;
+            <a href="{% url "twits:user_twits" user.id %}">{{user.username}}</a> 
+            <br> <br><hr>
+        {% endfor %}
+    </div>
+{% endblock %}
